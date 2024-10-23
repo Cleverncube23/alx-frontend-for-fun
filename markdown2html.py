@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-Markdown to HTML converter with heading support
+Markdown to HTML converter with heading and list support
 """
 
 import sys
@@ -15,23 +15,52 @@ def parse_heading(line):
         return f"<h{heading_level}>{heading_content}</h{heading_level}>"
     return None
 
+def parse_list(lines):
+    """
+    Parses Markdown list lines and converts them to HTML list.
+    """
+    html_list = ["<ul>"]
+    for line in lines:
+        list_item = line[1:].strip()  # Remove the '-' and any leading/trailing whitespace
+        html_list.append(f"<li>{list_item}</li>")
+    html_list.append("</ul>")
+    return "\n".join(html_list)
+
 def convert_markdown_to_html(input_file, output_file):
     """
-    Converts a Markdown file to HTML file with heading support.
+    Converts a Markdown file to HTML file with heading and list support.
     """
     try:
         with open(input_file, 'r') as md_file:
             lines = md_file.readlines()
             html_lines = []
+            inside_list = False
+            list_lines = []
+
             for line in lines:
-                if line.startswith('#'):
-                    html_line = parse_heading(line)
+                stripped_line = line.strip()
+
+                if stripped_line.startswith('#'):
+                    if inside_list:
+                        html_lines.append(parse_list(list_lines))
+                        list_lines = []
+                        inside_list = False
+                    html_line = parse_heading(stripped_line)
                     if html_line:
                         html_lines.append(html_line)
-                    else:
-                        html_lines.append(line.strip())
+                elif stripped_line.startswith('-'):
+                    if not inside_list:
+                        inside_list = True
+                    list_lines.append(stripped_line)
                 else:
-                    html_lines.append(line.strip())
+                    if inside_list:
+                        html_lines.append(parse_list(list_lines))
+                        list_lines = []
+                        inside_list = False
+                    html_lines.append(stripped_line)
+
+            if inside_list:
+                html_lines.append(parse_list(list_lines))
 
             html_content = "\n".join(html_lines)
             with open(output_file, 'w') as html_file:
